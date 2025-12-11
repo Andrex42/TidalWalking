@@ -10,7 +10,7 @@ This project is the assignment of the course "Artificial Intelligence for Video 
 
 | Assignment date | Deadline | Delivery date |
 | :---: | :---: | :---: |
-| 16/12/2024 | 09/12/2025 | --/--/----|
+| 16/12/2024 | 09/12/2025 | 09/12/2025 |
 </div>
 
 <div align="center">
