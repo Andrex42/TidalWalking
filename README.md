@@ -239,7 +239,7 @@ The variables are categorized into References (to interact with the scene), Map 
     </table>
     </div>
 
-   ##s Environment
+   ## Environment
 
     <div align="center">
     <table>
