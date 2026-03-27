@@ -1,259 +1,91 @@
-<div align="center">
+# Tidal Walking
 
-Tidal Walking
+> **Project Assignment:** Artificial Intelligence for Video Games (University of Milan)
 
-</div>
-
-This project is the assignment of the course "Artificial Intelligence for Video Games" at the University of Milan.
-
-<div align="center">
-
-| Assignment date | Deadline | Delivery date |
-| :---: | :---: | :---: |
+| Assignment Date | Deadline | Delivery Date |
+| :--- | :--- | :--- |
 | 16/12/2024 | 09/12/2025 | 09/12/2025 |
-</div>
 
-<div align="center">
+---
 
-## Assignment text
 ## Goal
 
 The goal of this project is to create an agent that can traverse a hill-shaped landscape while avoiding being submerged by water.
 
 ## Setup
 
-The landscape must be generated using perlin noise to create a landscape with height between 0 and 10 meters. The size of the landscape is 50 by 100 meters.
-In the landscape there is a water body whose level is changing in time. The level of the water will change between 0.5 and 7 meters at a constant speed of 0.5 meters per second. Once the maximum is reached, the level will decrease to the minimum and then raise again in an infinite loop.
-The agent must traverse the landscape from one corner to the opposite one staying out of the water at all times.
-The agent is moving at a speed of 1 meter per second when staying at the same level or going down a slope. The movement is reduced to 0.5 meters per second when going up a slope (moving into higher ground).
+* The landscape must be generated using Perlin noise to create a landscape with a height between 0 and 10 meters.
+* The size of the landscape is 50 by 100 meters.
+* In the landscape, there is a water body whose level is changing in time.
+* The level of the water will change between 0.5 and 7 meters at a constant speed of 0.5 meters per second. 
+* Once the maximum is reached, the level will decrease to the minimum and then raise again in an infinite loop.
+* The agent must traverse the landscape from one corner to the opposite one, staying out of the water at all times.
+* The agent moves at a speed of 1 meter per second when staying at the same level or going down a slope.
+* The movement is reduced to 0.5 meters per second when going up a slope (moving into higher ground).
 
 ## Constraints
 
-You must make sure that both the start and the goal corner are above 7.5 meters. They must always be out of the water.
-The agent cannot stop. I.e., the agent MUST always move somewhere.
-The system must work independently on the platform shape or size.
+* Both the start and the goal corner must be above 7.5 meters.
+* Start and goal corners must always be out of the water.
+* The agent cannot stop (i.e., the agent MUST always move somewhere).
+* The system must work independently of the platform shape or size.
 
-<div align="center">
+---
 
-## Problem analysis
-
-</div>
+## Problem Analysis
 
 Summing up the assignment text, it is possible to identify the following constraints, divided by category:
 
-## Movement
+### Movement
+* The agent must move at a speed of 1 m/s when flat or downhill.
+* The agent must move at a reduced speed of 0.5 m/s when going uphill.
+* The agent must traverse the landscape from start to goal.
+* The agent must never stop moving.
+* The agent must never be submerged by water.
 
-<ul>
-<li>The agent must move at a speed of 1 m/s when flat or downhill.</li>
-<li>The agent must move at a reduced speed of 0.5 m/s when going uphill.</li>
-<li>The agent must traverse the landscape from start to goal.</li>
-<li>The agent must never stop moving.</li>
-<li>The agent must never be submerged by water.</li>
-</ul>
+### Environment
+* The landscape is generated via Perlin Noise (0-10m height).
+* Landscape dimensions are 50x100 meters.
+* Start and Goal positions must be safe (> 7.5m height).
 
-## Environment
+### Events
+* Water level oscillates between 0.5m and 7.0m.
+* Water level changes at a constant speed of 0.5 m/s.
 
-<ul>
-<li>The landscape is generated via Perlin Noise (0-10m height).</li>
-<li>Landscape dimensions are 50x100 meters.</li>
-<li>Start and Goal positions must be safe (> 7.5m height).</li>
-</ul>
+---
 
-## Events
+## Adopted Solution
 
-<ul>
-<li>Water level oscillates between 0.5m and 7.0m.</li>
-<li>Water level changes at a constant speed of 0.5 m/s.</li>
-</ul>
+### Overview
+The used approach relies on three main scripts: `AgentController`, `WaterPlaneController`, and `PerlinTerrain`. The `AgentController` manages the navigation logic using a reactive Greedy Best-First Search approach to handle dynamic water levels without pre-calculating a full path, satisfying the "never stop" constraint. The `WaterPlaneController` handles the environmental dynamics, while `PerlinTerrain` ensures procedural generation requirements.
 
-<div align="center">
+---
 
-## Adopted solution
+### `AgentController` Class Documentation
 
-</div>
-
-## Overview
-
-The used approach relies on three main scripts: AgentController, WaterPlaneController, and PerlinTerrain.
-The AgentController manages the navigation logic using a reactive Greedy Best-First Search approach to handle dynamic water levels without pre-calculating a full path, satisfying the "never stop" constraint. The WaterPlaneController handles the environmental dynamics, while PerlinTerrain ensures procedural generation requirements.
-
-## AgentController class documentation
-
-## Environment
-
+#### Environment
 To accomplish the task, the agent moves on a terrain generated by Unity's Terrain system. The agent uses a Collider reference to interact with the ground via Raycasting, ensuring precise movement on the uneven surface.
 
-## Methods and variables
-
-## Variables
+#### Variables
 
 <details>
 <summary>Click here to show/hide the code for variables...</summary>
-    <br>
 
-    [Header("Scene References")]
-    public Transform targetLandmark;
-    public Transform waterObject;
-    public Collider terrainCollider;
+```csharp
+[Header("Scene References")]
+public Transform targetLandmark;
+public Transform waterObject;
+public Collider terrainCollider;
 
-    [Header("Map Configuration")]
-    public Vector3 mapOrigin = Vector3.zero;
-    public Vector2Int mapSize = new Vector2Int(50, 100);
+[Header("Map Configuration")]
+public Vector3 mapOrigin = Vector3.zero;
+public Vector2Int mapSize = new Vector2Int(50, 100);
 
-    [Header("Movement Parameters")]
-    public float flatSpeed = 1.0f;
-    public float uphillSpeed = 0.5f;
-    public float stopTolerance = 0.5f;
+[Header("Movement Parameters")]
+public float flatSpeed = 1.0f;
+public float uphillSpeed = 0.5f;
+public float stopTolerance = 0.5f;
 
-    // Internal state
-    private Vector3 currentTargetPosition;
-    private bool hasTarget = false;
-</details>
-
-The variables are categorized into References (to interact with the scene), Map Configuration (to define the logical grid over the terrain), and Movement Parameters (to tune speeds according to the assignment).
-    
-
-#### Methods
-
-    Start(): Initializes the agent. It performs safety checks on references and aligns the agent to the terrain height at the starting position to prevent falling through the map.
-
-    FixedUpdate(): The main loop for physics-based movement. It calls MoveAgent() only if a target is defined and the agent has not arrived yet.
-
-    MoveAgent(): Handles the physical translation of the agent.
-
-    void MoveAgent()
-    {
-        // ... calculation of distances ...
-
-        // 1. Rotation: Look at target (Y-axis only)
-        Vector3 lookTarget = new Vector3(currentTargetPosition.x, transform.position.y, currentTargetPosition.z);
-        transform.LookAt(lookTarget);
-
-        // 2. Speed Selection
-        float currentSpeed = (currentTargetPosition.y > transform.position.y + 0.05f) ? uphillSpeed : flatSpeed;
-
-        // 3. Movement
-        Vector3 newPos = Vector3.MoveTowards(transform.position, lookTarget, currentSpeed * Time.deltaTime);
-
-        // 4. Terrain Adhesion
-        float groundHeight = GetHeightAtPosition(newPos.x, newPos.z);
-        if (groundHeight > -50f) newPos.y = groundHeight;
-
-        transform.position = newPos;
-    }
-
-
-   This method ensures the agent adheres to the constraints:
-
-    Variable Speed: It checks if the target is higher than the current position to switch between flatSpeed (1 m/s) and uphillSpeed (0.5 m/s).
-
-    Terrain Adhesion: It uses GetHeightAtPosition (a raycast wrapper) to snap the Y coordinate to the terrain, ensuring the agent walks on the hills rather than flying through them.
-
-    CalculateNextStep(): Called when the agent reaches a grid node. It determines if the agent has reached the goal or needs to find a new neighbor.
-
-    If DistanceToGoal < stopTolerance, the agent stops (Victory).
-
-    Otherwise, it calls FindBestNeighbor() to pick the next move.
-
-    FindBestNeighbor(Vector2Int currentGridPos): This is the core decision-making algorithm.
-    It evaluates the 4 cardinal neighbors (North, South, East, West) on the grid.
-
-    <details>
-    <summary>Click here to show/hide the logic...</summary>
-
-
-
-
-
-    For each neighbor, it checks:
-
-    <strong>Boundaries:</strong> Is it inside the 50x100 grid?
-
-    <strong>Height:</strong> Is there valid terrain?
-
-    <strong>Safety:</strong> Is the height > waterLevel + safetyMargin?
-
-    Among safe neighbors, it selects the one that minimizes the distance to the targetLandmark (Greedy approach).
-    If <strong>no safe path</strong> exists (Panic Mode), it selects the neighbor with the highest absolute height to avoid drowning.
-
-    </details>		    
-
-  ## WaterPlaneController class documentation
-
-   ## Overview
-
-        This script manages the rising and falling tides of the water body.
-
-   ## Variables
-
-    minHeight, maxHeight: define the oscillation range (0.5m - 7m).
-
-    speed: defines the vertical speed (0.5 m/s).
-
-    terrain: reference to the terrain to automatically scale the water plane.
-
-   ## Methods
-
-    ScaleAndCenterPlane(): Automatically resizes the standard Unity Plane (10x10 units) to cover the entire Terrain dimensions.
-
-    WaterLevelLoop(): A Coroutine that continuously updates the Y position of the water plane, oscillating between min and max height.
-
-  ## PerlinTerrain class documentation
-
-   ## Overview
-
-    Provided in the codebase, this script generates the procedural landscape.
-
-   ## Logic
-
-    It utilizes a 2D array of gradients (Random.insideUnitCircle) to compute Perlin Noise values. These values are then normalized and applied to the Unity TerrainData using SetHeights, creating a smooth, hill-shaped landscape with heights ranging from 0 to 10 meters.
-
-    <div align="center">
-
-   ## Summary
-
-    </div>
-
-    Finally, here is a recap of how the constraints have been addressed in this solution:
-
-   ## Movement
-
-    <div align="center">
-    <table>
-    <tr>
-    <th>Constraint</th>
-    <th>Solution</th>
-    </tr>
-    <tr>
-    <td><span style="color:red">Speed must be 1 m/s (flat) and 0.5 m/s (uphill).</span></td>
-    <td><span style="color:green">Implemented in <code>MoveAgent</code> by comparing current Y vs target Y.</span></td>
-    </tr>
-    <tr>
-    <td><span style="color:red">The agent must never stop.</span></td>
-    <td><span style="color:green">The Greedy algorithm always selects a neighbor. In "Panic Mode" (blocked path), it moves to the highest local point instead of waiting.</span></td>
-    </tr>
-    <tr>
-    <td><span style="color:red">Avoid water.</span></td>
-    <td><span style="color:green">The agent checks terrain height against current water level before choosing any step.</span></td>
-    </tr>
-    </table>
-    </div>
-
-   ## Environment
-
-    <div align="center">
-    <table>
-    <tr>
-    <th>Constraint</th>
-    <th>Solution</th>
-    </tr>
-    <tr>
-    <td><span style="color:red">Landscape 50x100m with Perlin Noise.</span></td>
-    <td><span style="color:green">Handled by <code>PerlinTerrain.cs</code> which generates the heightmap procedurally.</span></td>
-    </tr>
-    <tr>
-    <td><span style="color:red">Water level changing (0.5-7m).</span></td>
-    <td><span style="color:green">Handled by <code>WaterPlaneController.cs</code> loop.</span></td>
-    </tr>
-    </table>
-    </div>
+// Internal state
+private Vector3 currentTargetPosition;
+private bool hasTarget = false;
